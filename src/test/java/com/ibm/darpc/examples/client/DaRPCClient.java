@@ -34,6 +34,8 @@ import com.ibm.darpc.DaRPCClientEndpoint;
 import com.ibm.darpc.DaRPCClientGroup;
 import com.ibm.darpc.DaRPCEndpoint;
 import com.ibm.darpc.DaRPCFuture;
+import com.ibm.darpc.DaRPCHeapMemPool;
+import com.ibm.darpc.DaRPCHugePagesMemPool;
 import com.ibm.darpc.DaRPCStream;
 import com.ibm.darpc.examples.protocol.RdmaRpcProtocol;
 import com.ibm.darpc.examples.protocol.RdmaRpcRequest;
@@ -248,8 +250,12 @@ public class DaRPCClient {
 		ClientThread[] benchmarkTask = new ClientThread[threadCount];
 		
 		RdmaRpcProtocol rpcProtocol = new RdmaRpcProtocol();
+		DaRPCHeapMemPool memPool = new DaRPCHeapMemPool();
+		memPool.init();
+//		DaRPCHugePagesMemPool memPool = new DaRPCHugePagesMemPool();
+//		memPool.init("/craildata/memory/darpcmempool");
 		System.out.println("starting.. threads " + threadCount + ", connections " + connections + ", server " + ipAddress + ", recvQueue " + recvQueue + ", sendQueue" + sendQueue + ", batchSize " + batchSize + ", mode " + mode);
-		DaRPCClientGroup<RdmaRpcRequest, RdmaRpcResponse> group = DaRPCClientGroup.createClientGroup(rpcProtocol, 100, maxinline, recvQueue, sendQueue);
+		DaRPCClientGroup<RdmaRpcRequest, RdmaRpcResponse> group = DaRPCClientGroup.createClientGroup(rpcProtocol, memPool, 100, maxinline, recvQueue, sendQueue);
 		URI uri = URI.create("rdma://" + ipAddress + ":" + 1919);
 		int k = 0;
 		for (int i = 0; i < rpcConnections.length; i++){
