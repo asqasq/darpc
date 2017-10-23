@@ -24,7 +24,10 @@ package com.ibm.darpc;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -53,8 +56,8 @@ public abstract class DaRPCEndpoint<R extends DaRPCMessage, T extends DaRPCMessa
 	private ByteBuffer[] sendBufs;
 	private SVCPostRecv[] recvCall;
 	private SVCPostSend[] sendCall;
-	private ConcurrentHashMap<Integer, SVCPostSend> pendingPostSend;
-	private ArrayBlockingQueue<SVCPostSend> freePostSend;
+	private Map<Integer, SVCPostSend> pendingPostSend;
+	private Queue<SVCPostSend> freePostSend;
 	private AtomicLong ticketCount;
 	private int sendPipelineLength;
 	private int recvPipelineLength;
@@ -73,8 +76,13 @@ public abstract class DaRPCEndpoint<R extends DaRPCMessage, T extends DaRPCMessa
 		this.rawBufferSize = headerSize + this.payloadSize;
 		this.sendPipelineLength = rpcGroup.sendQueueSize();
 		this.recvPipelineLength = rpcGroup.recvQueueSize();
-		this.freePostSend = new ArrayBlockingQueue<SVCPostSend>(sendPipelineLength);
-		this.pendingPostSend = new ConcurrentHashMap<Integer, SVCPostSend>();
+		if (serverSide) {
+			this.freePostSend = new DaRPCArrayQueue<SVCPostSend>(sendPipelineLength);
+			this.pendingPostSend =  new HashMap<Integer, SVCPostSend>();
+		} else {
+			this.freePostSend = new ArrayBlockingQueue<SVCPostSend>(sendPipelineLength);
+			this.pendingPostSend = new ConcurrentHashMap<Integer, SVCPostSend>();
+		}
 		this.recvBufs = new ByteBuffer[recvPipelineLength];
 		this.sendBufs = new ByteBuffer[sendPipelineLength];
 		this.recvCall = new SVCPostRecv[recvPipelineLength];

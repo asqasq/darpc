@@ -28,8 +28,8 @@ public class DaRPCHugePagesMemPool extends DaRPCMemPool {
 		}
 	}
 
-	public void init(String directory) {
-		super.init();
+	public void init(int allocationSize, int minAllocationSize, int alignmentSize, String directory) {
+		super.init(allocationSize, minAllocationSize, alignmentSize);
 		this.directory = directory;
 	}
 

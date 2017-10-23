@@ -40,11 +40,20 @@ public abstract class DaRPCMemPool {
 		allocationSize = defaultAllocationSize;
 		minAllocationSize = defaultMinAllocationSize;
 		alignmentSize = defaultAlignmentSize;
+		this.access = IbvMr.IBV_ACCESS_LOCAL_WRITE | IbvMr.IBV_ACCESS_REMOTE_WRITE | IbvMr.IBV_ACCESS_REMOTE_READ;
 		isOpen = true;
 	}
 
-	public void init() {
-		this.access = IbvMr.IBV_ACCESS_LOCAL_WRITE | IbvMr.IBV_ACCESS_REMOTE_WRITE | IbvMr.IBV_ACCESS_REMOTE_READ;
+	public void init(int allocationSize, int minAllocationSize, int alignmentSize) {
+		if (allocationSize >= 0) {
+			this.allocationSize = allocationSize;
+		}
+		if (minAllocationSize >= 0) {
+			this.minAllocationSize = minAllocationSize;
+		}
+		if (alignmentSize >= 0) {
+			this.alignmentSize = alignmentSize;
+		}
 	}
 
 	public synchronized void close() {

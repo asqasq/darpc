@@ -54,9 +54,9 @@ public class DaRPCServer {
 		System.out.println("running...server " + ipAddress + ", poolsize " + poolsize + ", maxinline " + maxinline + ", polling " + polling + ", recvQueue " + recvQueue + ", sendQueue " + sendQueue + ", wqSize " + wqSize + ", rpcservice-timeout " + servicetimeout);
 		RdmaRpcService rpcService = new RdmaRpcService(servicetimeout);
 		DaRPCHeapMemPool memPool = new DaRPCHeapMemPool();
-		memPool.init();
+		memPool.init(-1, -1, -1);
 //		DaRPCHugePagesMemPool memPool = new DaRPCHugePagesMemPool();
-//		memPool.init("/craildata/memory/darpcmempool");
+//		memPool.init(16 * 1024 * 1024, 4 * 1024, 4 * 1024, "/craildata/memory/darpcmempool");
 		DaRPCServerGroup<RdmaRpcRequest, RdmaRpcResponse> group = DaRPCServerGroup.createServerGroup(rpcService, memPool, clusterAffinities, -1, maxinline, polling, recvQueue, sendQueue, wqSize, 32);
 		RdmaServerEndpoint<DaRPCServerEndpoint<RdmaRpcRequest, RdmaRpcResponse>> serverEp = group.createServerEndpoint();
 		URI uri = URI.create("rdma://" + ipAddress + ":" + 1919);

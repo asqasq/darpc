@@ -251,9 +251,9 @@ public class DaRPCClient {
 		
 		RdmaRpcProtocol rpcProtocol = new RdmaRpcProtocol();
 		DaRPCHeapMemPool memPool = new DaRPCHeapMemPool();
-		memPool.init();
+		memPool.init(-1, -1, -1);
 //		DaRPCHugePagesMemPool memPool = new DaRPCHugePagesMemPool();
-//		memPool.init("/craildata/memory/darpcmempool");
+//		memPool.init(16 * 1024 * 1024, 4 * 1024, 4 * 1024, "/craildata/memory/darpcmempool");
 		System.out.println("starting.. threads " + threadCount + ", connections " + connections + ", server " + ipAddress + ", recvQueue " + recvQueue + ", sendQueue" + sendQueue + ", batchSize " + batchSize + ", mode " + mode);
 		DaRPCClientGroup<RdmaRpcRequest, RdmaRpcResponse> group = DaRPCClientGroup.createClientGroup(rpcProtocol, memPool, 100, maxinline, recvQueue, sendQueue);
 		URI uri = URI.create("rdma://" + ipAddress + ":" + 1919);
