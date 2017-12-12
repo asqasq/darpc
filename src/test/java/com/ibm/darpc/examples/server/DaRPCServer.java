@@ -35,7 +35,7 @@ import com.ibm.disni.rdma.*;
 import com.ibm.disni.util.*;
 
 public class DaRPCServer {
-	private String ipAddress; 
+	private String ipAddress;
 	private int poolsize = 3;
 	private int recvQueue = 16;
 	private int sendQueue = 16;
@@ -44,7 +44,7 @@ public class DaRPCServer {
 	private boolean polling = false;
 	private int maxinline = 0;
 	private int connections = 16;
-	
+
 	public void run() throws Exception{
 		long[] clusterAffinities = new long[poolsize];
 		for (int i = 0; i < poolsize; i++){
@@ -53,16 +53,16 @@ public class DaRPCServer {
 		}
 		System.out.println("running...server " + ipAddress + ", poolsize " + poolsize + ", maxinline " + maxinline + ", polling " + polling + ", recvQueue " + recvQueue + ", sendQueue " + sendQueue + ", wqSize " + wqSize + ", rpcservice-timeout " + servicetimeout);
 		RdmaRpcService rpcService = new RdmaRpcService(servicetimeout);
-		DaRPCMemPool memPool = new DaRPCMemPoolImplBuddy(null, 0, -1, -1, -1);
+		DaRPCMemPool memPool = new DaRPCMemPoolImplBuddy();
 		DaRPCServerGroup<RdmaRpcRequest, RdmaRpcResponse> group = DaRPCServerGroup.createServerGroup(rpcService, memPool, clusterAffinities, -1, maxinline, polling, recvQueue, sendQueue, wqSize, 32);
 		RdmaServerEndpoint<DaRPCServerEndpoint<RdmaRpcRequest, RdmaRpcResponse>> serverEp = group.createServerEndpoint();
 		URI uri = URI.create("rdma://" + ipAddress + ":" + 1919);
 		serverEp.bind(uri);
 		while(true){
 			serverEp.accept();
-		}		
+		}
 	}
-	
+
 	public void launch(String[] args) throws Exception {
 		String[] _args = args;
 		if (args.length < 1) {
@@ -103,13 +103,13 @@ public class DaRPCServer {
 			} else {
 				System.exit(1); // undefined option
 			}
-		}	
-		
+		}
+
 		this.run();
 	}
-	
-	public static void main(String[] args) throws Exception { 
+
+	public static void main(String[] args) throws Exception {
 		DaRPCServer rpcServer = new DaRPCServer();
-		rpcServer.launch(args);		
-	}	
+		rpcServer.launch(args);
+	}
 }
