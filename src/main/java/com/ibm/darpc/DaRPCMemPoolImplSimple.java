@@ -10,24 +10,18 @@ import com.ibm.disni.rdma.verbs.IbvPd;
 import com.ibm.disni.util.MemoryUtils;
 
 public class DaRPCMemPoolImplSimple implements DaRPCMemPool {
-//	final int messageSize;
 	final int allocationSize;
 	final int alignmentSize;
-//	final int recvQueueLen;
-//	final int sendQueueLen;
 	int offset;
 	ByteBuffer byteBuffer;
 	IbvPd pd;
 	IbvMr mr;
 	int access;
 	LinkedList<ByteBuffer> freeList;
-	
+
 	public DaRPCMemPoolImplSimple(int allocationSize, int alignmentSize) {
-//		this.messageSize = Math.max(protocol.createRequest().size(), protocol.createResponse().size());;
-		this.allocationSize = 16 * 1024 * 1024;
+		this.allocationSize = allocationSize;
 		this.alignmentSize = alignmentSize;
-//		this.recvQueueLen = receiveQueueLength;
-//		this.sendQueueLen = sendQueueLength;
 
 		ByteBuffer rawBuffer = ByteBuffer.allocateDirect(allocationSize + alignmentSize);
 		long rawBufferAddress = MemoryUtils.getAddress(rawBuffer);
@@ -38,7 +32,7 @@ public class DaRPCMemPoolImplSimple implements DaRPCMemPool {
 		byteBuffer = rawBuffer.slice();
 		this.access = IbvMr.IBV_ACCESS_LOCAL_WRITE | IbvMr.IBV_ACCESS_REMOTE_WRITE | IbvMr.IBV_ACCESS_REMOTE_READ;
 	}
-	
+
 	@Override
 	public void close() {
 		synchronized(this) {
@@ -66,7 +60,7 @@ public class DaRPCMemPoolImplSimple implements DaRPCMemPool {
 			}
 
 			if (freeList == null) {
-				int offset = size;
+				offset = size;
 				freeList = new LinkedList<ByteBuffer>();
 				int i = 0;
 				while ((i * offset + offset) < byteBuffer.capacity()) {
@@ -83,9 +77,10 @@ public class DaRPCMemPoolImplSimple implements DaRPCMemPool {
 					throw new IOException("Requested size does not match block size managed by memory pool.");
 				}
 			}
-			r = freeList.getFirst();
+			r = freeList.removeFirst();
+			r.clear();
 		}
-		return r; 
+		return r;
 	}
 
 	@Override

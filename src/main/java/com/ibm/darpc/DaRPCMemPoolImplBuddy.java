@@ -83,16 +83,20 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 		isOpen = true;
 	}
 
-// public API	
+// public API
+	@Override
 	public void close() {
 		cleanup();
 	}
+	@Override
 	public ByteBuffer getBuffer(RdmaEndpoint endpoint, int size) throws IOException {
 		return getBufferImpl(endpoint, size);
 	}
+	@Override
 	public void freeBuffer(RdmaEndpoint endpoint, ByteBuffer b) {
 		freeBufferImpl(endpoint, b);
 	}
+	@Override
 	public int getLKey(RdmaEndpoint endpoint, ByteBuffer b) throws IllegalArgumentException {
 		if (b == null) {
 			System.out.println("getLKey(): Argument buffer is null. Cannot return lkey.");
@@ -138,6 +142,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 		}
 	}
 
+	@Override
 	public void finalize() {
 		// Just in case the user did not do that.
 		close();
@@ -317,6 +322,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 			addNewBuddy(pdm);
 			b = getPower2Buffer(pdm, i);
 		}
+		b.clear();
 		return (b);
 	}
 
@@ -425,6 +431,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 		state s;
 		int size;
 		int lkey;
+		@Override
 		public String toString() {
 			return new String("Size= " + size + ", state = "
 					+ (s == state.FREE ? "FREE": s == state.USED ? "USED" : "SPLIT")
