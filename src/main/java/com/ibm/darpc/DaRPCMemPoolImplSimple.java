@@ -34,7 +34,7 @@ public class DaRPCMemPoolImplSimple implements DaRPCMemPool {
 	}
 
 	@Override
-	public void close() {
+	public void close() throws IOException {
 		synchronized(this) {
 			try {
 				mr.deregMr().execute().free();

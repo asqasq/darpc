@@ -18,10 +18,10 @@ import com.ibm.disni.rdma.verbs.IbvPd;
 import com.ibm.disni.util.MemoryUtils;
 
 public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
-	final int defaultAllocationSize = 16 * 1024 * 1024; // 16MB
-	final int defaultMinAllocationSize = 4 * 1024; // 4KB
-	final int defaultAlignmentSize = 4 * 1024; // 4KB
-	final int defaultHugePageLimit = 0; // no huge pages by default
+	final static int defaultAllocationSize = 16 * 1024 * 1024; // 16MB
+	final static int defaultMinAllocationSize = 4 * 1024; // 4KB
+	final static int defaultAlignmentSize = 4 * 1024; // 4KB
+	final static int defaultHugePageLimit = 0; // no huge pages by default
 
 	private HashMap<IbvPd, PdMemPool> pdMemPool; // One buddy allocator per protection domain
 	private LinkedList<IbvMr> mrs;
@@ -42,32 +42,36 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 
 
 
-
-	public DaRPCMemPoolImplBuddy(String hugePagePath, int hugePageLimit, int allocationSize, int minAllocationSize, int alignmentSize) {
+	public DaRPCMemPoolImplBuddy() throws IOException {
 		isOpen = false;
 		this.allocationSize = defaultAllocationSize;
 		this.minAllocationSize = defaultMinAllocationSize;
 		this.alignmentSize = defaultAlignmentSize;
 		this.hugePageLimit = defaultHugePageLimit;
+
+		init();
+	}
+
+	public DaRPCMemPoolImplBuddy(String hugePagePath, int hugePageLimit, int allocationSize, int minAllocationSize, int alignmentSize) throws IOException {
+		isOpen = false;
+		this.hugePagePath = hugePagePath;
+		this.allocationSize = allocationSize;
+		this.minAllocationSize = minAllocationSize;
+		this.alignmentSize = alignmentSize;
+		this.hugePageLimit = hugePageLimit;
+
+		init();
+	}
+
+	protected void init() throws IOException {
+		allocatedHugePageMemory = 0;
 		this.access = IbvMr.IBV_ACCESS_LOCAL_WRITE | IbvMr.IBV_ACCESS_REMOTE_WRITE | IbvMr.IBV_ACCESS_REMOTE_READ;
 
-		this.hugePagePath = hugePagePath;
+		if ((this.hugePageLimit > 0) && (hugePagePath == null)) {
+			throw new IOException("hugePageLimit is > 0 (" + this.hugePageLimit + "), but no hugepage path given.");
+		}
 
-		allocatedHugePageMemory = 0;
-
-		if (allocationSize >= 0) {
-			this.allocationSize = allocationSize;
-		}
-		if (minAllocationSize >= 0) {
-			this.minAllocationSize = minAllocationSize;
-		}
-		if (alignmentSize >= 0) {
-			this.alignmentSize = alignmentSize;
-		}
-		if (hugePageLimit >= 0) {
-			this.hugePageLimit = hugePageLimit;
-		}
-		if ((hugePagePath != null) && (!hugePagePath.equals("")) && (this.hugePageLimit > 0)) {
+		if (hugePagePath != null) {
 			dir = new File(hugePagePath);
 			if (!dir.exists()){
 				dir.mkdirs();
@@ -75,17 +79,17 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 			for (File child : dir.listFiles()) {
 				child.delete();
 			}
-		} else {
-			this.hugePageLimit = 0;
 		}
+
 		pdMemPool = new HashMap<IbvPd, PdMemPool>();
 		mrs = new LinkedList<IbvMr>();
 		isOpen = true;
 	}
 
+
 // public API
 	@Override
-	public void close() {
+	public void close() throws IOException {
 		cleanup();
 	}
 	@Override
@@ -119,8 +123,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 		if (isOpen) {
 			isOpen = false;
 			pdMemPool = null;
-			for (Iterator<IbvMr> it = mrs.iterator(); it.hasNext(); ) {
-				IbvMr m = it.next();
+			for (IbvMr m : mrs) {
 				try {
 					m.deregMr().execute().free();
 				} catch (IOException e) {
@@ -145,7 +148,12 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 	@Override
 	public void finalize() {
 		// Just in case the user did not do that.
-		close();
+		try {
+			close();
+		} catch (Exception e) {
+			System.out.println("MemoryPoolImplBuddy: Could not finalize() the memory pool");
+			e.printStackTrace();
+		}
 	}
 
 
@@ -161,7 +169,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 
 		if (alignmentSize > 1) {
 			ByteBuffer rawBuffer = ByteBuffer.allocateDirect(allocationSize + alignmentSize);
-			long rawBufferAddress = ((sun.nio.ch.DirectBuffer)rawBuffer).address();
+			long rawBufferAddress = MemoryUtils.getAddress(rawBuffer);
 			long alignmentOffset = rawBufferAddress % alignmentSize;
 			if (alignmentOffset != 0) {
 				rawBuffer.position(alignmentSize - (int)alignmentOffset);
@@ -185,7 +193,7 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 			throw e;
 		}
 		try {
-			randomFile.setLength(allocationSize);
+			randomFile.setLength(allocationSize + alignmentSize);
 		} catch (IOException e) {
 			System.out.println("Coult not set allocation length of mapped random access file on huge page directory.");
 			randomFile.close();
@@ -202,8 +210,15 @@ public class DaRPCMemPoolImplBuddy implements DaRPCMemPool {
 			throw e;
 		}
 		randomFile.close();
-		allocatedHugePageMemory += allocationSize;
-		return (mappedBuffer);
+		allocatedHugePageMemory += (allocationSize + alignmentSize);
+
+		long rawBufferAddress = MemoryUtils.getAddress(mappedBuffer);
+		long alignmentOffset = rawBufferAddress % alignmentSize;
+		if (alignmentOffset != 0) {
+			mappedBuffer.position(alignmentSize - (int)alignmentOffset);
+		}
+		ByteBuffer b = mappedBuffer.slice();
+		return (b);
 	}
 
 
